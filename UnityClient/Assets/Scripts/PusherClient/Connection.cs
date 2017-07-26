@@ -1,50 +1,33 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
+using PusherClient.Helper;
 using WebSocketSharp;
 
 namespace PusherClient
 {
     internal class Connection
     {
-        private WebSocket _websocket = null;
-        private string _socketId = null;
-        private string _url = null;
-        private Pusher _pusher = null;
-        private ConnectionState _state = ConnectionState.Initialized;
+        private readonly Pusher _pusher;
+        private readonly string _url;
+
+        private WebSocket _websocket;
+
         private bool _allowReconnect = true;
 
-        public event ConnectedEventHandler Connected;
-        public event ConnectionStateChangedEventHandler ConnectionStateChanged;
+        internal event ConnectedEventHandler Connected;
+        internal event ConnectionStateChangedEventHandler ConnectionStateChanged;
 
         #region Properties
-
-        internal string SocketID
-        {
-            get
-            {
-                return _socketId;
-            }
-        }
-        internal ConnectionState State
-        {
-            get
-            {
-                return _state;
-            }
-        }
-
+        internal string SocketID { get; private set; }
+        internal ConnectionState State { get; private set; }
         #endregion
 
-        public Connection(Pusher pusher, string url)
+        internal Connection(Pusher pusher, string url)
         {
-            this._url = url;
-            this._pusher = pusher;
+            State = ConnectionState.Initialized;
+            _url = url;
+            _pusher = pusher;
         }
-
-        #region Internal Methods
 
         internal void Connect()
         {
@@ -55,11 +38,11 @@ namespace PusherClient
             _allowReconnect = true;
 
             _websocket = new WebSocket(_url);
-			_websocket.OnError += websocket_Error;
-			_websocket.OnOpen += websocket_Opened;
-			_websocket.OnClose += websocket_Closed;
-			_websocket.OnMessage += websocket_MessageReceived;
-			_websocket.ConnectAsync();
+            _websocket.OnError += WebsocketError;
+            _websocket.OnOpen += WebsocketOpened;
+            _websocket.OnClose += WebsocketClosed;
+            _websocket.OnMessage += WebsocketMessageReceived;
+            _websocket.ConnectAsync();
         }
 
         internal void Disconnect()
@@ -71,145 +54,158 @@ namespace PusherClient
 
         internal void Send(string message)
         {
-			Pusher.Log( "Sending: " + message );
-			_websocket.SendAsync( message, delegate(bool obj) { } );
+            Pusher.Log("Sending: " + message);
+            _websocket.SendAsync(message, delegate { });
         }
-
-        #endregion
-
-        #region Private Methods
 
         private void ChangeState(ConnectionState state)
         {
-            this._state = state;
+            State = state;
 
-            if (ConnectionStateChanged != null)
-                ConnectionStateChanged(this, this._state);
+            if(ConnectionStateChanged != null)
+            {
+                ConnectionStateChanged(this, State);
+            }
         }
 
-        private void websocket_MessageReceived(object sender, MessageEventArgs e)
+        private void WebsocketMessageReceived(object sender, MessageEventArgs e)
         {
-			Pusher.Log( "Websocket message received: " + e.Data );
+            Pusher.Log("Websocket message received: " + e.Data);
 
-			PusherEventData message = PusherEventData.FromJson( e.Data );
-            _pusher.EmitEvent(message.eventName, message.data);
+            PusherEventData message = PusherEventData.FromJson(e.Data);
+            _pusher.EmitEvent(message.EventName, message.Data);
 
-            if (message.eventName.StartsWith("pusher"))
+            if(message.EventName.StartsWith(PusherEvent.PusherEventPrefix))
             {
-                // Assume Pusher event
-                switch (message.eventName)
-                {
-                    case Constants.ERROR:
-                        ParseError(message.data);
-                        break;
-
-                    case Constants.CONNECTION_ESTABLISHED:
-                        ParseConnectionEstablished(message.data);
-                        break;
-
-                    case Constants.CHANNEL_SUBSCRIPTION_SUCCEEDED:
-
-                        if (_pusher.Channels.ContainsKey(message.channel))
-                        {
-                            var channel = _pusher.Channels[message.channel];
-                            channel.SubscriptionSucceeded(message.data);
-                        }
-
-                        break;
-
-                    case Constants.CHANNEL_SUBSCRIPTION_ERROR:
-
-                        throw new PusherException("Error received on channel subscriptions: " + e.Data, ErrorCodes.SubscriptionError);
-
-                    case Constants.CHANNEL_MEMBER_ADDED:
-
-                        // Assume channel event
-                        if (_pusher.Channels.ContainsKey(message.channel))
-                        {
-                            var channel = _pusher.Channels[message.channel];
-
-                            if (channel is PresenceChannel)
-                            {
-                                ((PresenceChannel)channel).AddMember(message.data);
-                                break;
-                            }
-                        }
-
-						Pusher.LogWarning( "Received a presence event on channel '" + message.channel + "', however there is no presence channel which matches." );
-                        break;
-
-                    case Constants.CHANNEL_MEMBER_REMOVED:
-
-                        // Assume channel event
-                        if (_pusher.Channels.ContainsKey(message.channel))
-                        {
-                            var channel = _pusher.Channels[message.channel];
-
-                            if (channel is PresenceChannel)
-                            {
-                                ((PresenceChannel)channel).RemoveMember(message.data);
-                                break;
-                            }
-                        }
-
-						Pusher.LogWarning( "Received a presence event on channel '" + message.channel + "', however there is no presence channel which matches." );
-                        break;
-
-                }
+                HandlePusherEvent(e, message);
             }
             else
             {
-                // Assume channel event
-                if (_pusher.Channels.ContainsKey(message.channel))
-                    _pusher.Channels[message.channel].EmitEvent(message.eventName, message.data);
+                // Assume it's a channel event
+                HandleChannelEvent(message);
             }
-
-            
         }
 
-        private void websocket_Opened(object sender, EventArgs e)
+        private void HandleChannelEvent(PusherEventData message)
         {
-			Pusher.Log( "Websocket opened OK." );
+            Channel channel;
+            if(_pusher.Channels.TryGetValue(message.Channel, out channel))
+            {
+                channel.EmitEvent(message.EventName, message.Data);
+            }
         }
 
-        private void websocket_Closed(object sender, EventArgs e)
+        private void HandlePusherEvent(MessageEventArgs args, PusherEventData message)
         {
-			Pusher.Log( "Websocket connection has been closed" );
+            // Assume Pusher event
+            switch(message.EventName)
+            {
+                case PusherEvent.Error:
+                    ParseError(message.Data);
+                    break;
+
+                case PusherEvent.ConnectionEstablished:
+                    ParseConnectionEstablished(message.Data);
+                    break;
+
+                case PusherEvent.ChannelSubscriptionSucceeded:
+                    {
+                        Channel channel;
+                        if(_pusher.Channels.TryGetValue(message.Channel, out channel))
+                        {
+                            channel.SubscriptionSucceeded(message.Data);
+                        }
+                        break;
+                    }
+
+                case PusherEvent.ChannelSubscriptionError:
+                    throw new PusherException("Error received on channel subscriptions: " + args.Data,
+                                              ErrorCodes.SubscriptionError);
+
+                // Assume channel event
+                case PusherEvent.ChannelMemberAdded:
+                    {
+                        Channel channel;
+                        if(_pusher.Channels.TryGetValue(message.Channel, out channel))
+                        {
+                            var presenceChannel = channel as PresenceChannel;
+                            if(presenceChannel != null)
+                            {
+                                presenceChannel.AddMember(message.Data);
+                                break;
+                            }
+                        }
+                        Pusher.LogWarning("Received a presence event on channel '" + message.Channel +
+                                          "', however there is no presence channel which matches.");
+                        break;
+                    }
+
+                // Assume channel event
+                case PusherEvent.ChannelMemberRemoved:
+                    {
+                        Channel channel;
+                        if(_pusher.Channels.TryGetValue(message.Channel, out channel))
+                        {
+                            var presenceChannel = channel as PresenceChannel;
+                            if(presenceChannel != null)
+                            {
+                                presenceChannel.RemoveMember(message.Data);
+                                break;
+                            }
+                        }
+
+                        Pusher.LogWarning("Received a presence event on channel '" + message.Channel +
+                                          "', however there is no presence channel which matches.");
+                        break;
+                    }
+            }
+        }
+
+        private static void WebsocketOpened(object sender, EventArgs e)
+        {
+            Pusher.Log("Websocket opened successfully.");
+        }
+
+        private void WebsocketClosed(object sender, EventArgs e)
+        {
+            Pusher.Log("Websocket connection has been closed");
 
             ChangeState(ConnectionState.Disconnected);
 
             if(_allowReconnect)
+            {
                 Connect();
+            }
         }
 
-        private void websocket_Error(object sender, WebSocketSharp.ErrorEventArgs e)
+        private static void WebsocketError(object sender, ErrorEventArgs e)
         {
-			// TODO: What happens here? Do I need to re-connect, or do I just log the issue?
-			Pusher.LogWarning( "Websocket error: " + e.Message );
+            // TODO: What happens here? Do I need to re-connect, or do I just log the issue?
+            Pusher.LogWarning("Websocket error: " + e.Message);
         }
 
         private void ParseConnectionEstablished(string data)
         {
-			Dictionary<string,object> dict = JsonHelper.Deserialize<Dictionary<string,object>>( data );
-			_socketId = DataFactoryHelper.GetDictonaryValue( dict, "socket_id", string.Empty );
-            
+            var dict = JsonHelper.Deserialize<Dictionary<string, object>>(data);
+
+            SocketID = DataFactoryHelper.GetDictionaryValue(dict, PusherJsonKey.SocketID, string.Empty);
+
             ChangeState(ConnectionState.Connected);
 
-            if (Connected != null)
+            if(Connected != null)
                 Connected(this);
         }
 
-        private void ParseError(string data)
+        private static void ParseError(string data)
         {
-			Dictionary<string,object> dict = JsonHelper.Deserialize<Dictionary<string,object>>( data );
-			string message = DataFactoryHelper.GetDictonaryValue( dict, "message", string.Empty );
-			string errorCodeStr = DataFactoryHelper.GetDictonaryValue( dict, "code", ErrorCodes.Unkown.ToString() );
-			ErrorCodes error = DataFactoryHelper.EnumFromString<ErrorCodes>( errorCodeStr );
+            var dict = JsonHelper.Deserialize<Dictionary<string, object>>(data);
+            string message = DataFactoryHelper.GetDictionaryValue(dict, PusherJsonKey.Message, string.Empty);
+            string errorCodeStr = DataFactoryHelper.GetDictionaryValue(dict, PusherJsonKey.Code,
+                                                                       ErrorCodes.Unknown.ToString());
+
+            var error = DataFactoryHelper.EnumFromString<ErrorCodes>(errorCodeStr);
 
             throw new PusherException(message, error);
         }
-
-        #endregion
-
     }
 }

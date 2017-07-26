@@ -1,70 +1,64 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Diagnostics;
-using System.Net;
+using PusherClient.Helper;
 
 namespace PusherClient
 {
-
-    /* TODO: Write tests
-     * - Websocket disconnect
-        - Connection lost, not cleanly closed
-        - MustConnectOverSSL = 4000,
-        - App does not exist
-        - App disabled
-        - Over connection limit
-        - Path not found
-        - Client over rate limie
-        - Conditions for client event triggering
-     */
-    // TODO: NUGET Package
-    // TODO: Ping & pong, are these handled by the Webscoket library out of the box?
-    // TODO: Add assembly info file?
-    // TODO: Implement connection fallback strategy
-
     // A delegate type for hooking up change notifications.
     public delegate void ConnectedEventHandler(object sender);
+
     public delegate void ConnectionStateChangedEventHandler(object sender, ConnectionState state);
 
     public class Pusher : EventEmitter
     {
-		public static void Log( string message ) {
-			if( PusherSettings.Verbose )
-				UnityEngine.Debug.Log ( "Pusher: " + message );
-		}
+        public static void Log(string message)
+        {
+            if((PusherSettings.LogLevel & PusherSettings.ELogLevel.Log) == PusherSettings.ELogLevel.Log)
+            {
+                UnityEngine.Debug.Log("[Pusher] " + message);
+            }
+        }
 
-		public static void LogWarning( string message ) {
-			UnityEngine.Debug.LogWarning ( "Pusher: " + message );
-		}
+        public static void LogWarning(string message)
+        {
+            if((PusherSettings.LogLevel & PusherSettings.ELogLevel.Warning) == PusherSettings.ELogLevel.Warning)
+            {
+                UnityEngine.Debug.LogWarning("[Pusher] " + message);
+            }
+        }
 
-        const int PROTOCOL_NUMBER = 5;
-        string _applicationKey = null;
-        PusherOptions _options = null;
+        public static void LogError(string message)
+        {
+            if((PusherSettings.LogLevel & PusherSettings.ELogLevel.Error) == PusherSettings.ELogLevel.Error)
+            {
+                UnityEngine.Debug.LogError("[Pusher] " + message);
+            }
+        }
 
-        public string Host = "ws.pusherapp.com";
-        private Connection _connection = null;
- 
+        public const string Host = "ws-us2.pusher.com";
+
+        private const int _protocolNumber = 5;
+
+        private readonly PusherSettings _settings;
+        private readonly IAuthorizer _authorizer;
+        private Connection _connection;
+
         public event ConnectedEventHandler Connected;
         public event ConnectionStateChangedEventHandler ConnectionStateChanged;
-        public Dictionary<string, Channel> Channels = new Dictionary<string, Channel>();
 
         #region Properties
 
-        public string SocketID {
-            get
-            {
-                return _connection.SocketID;
-            }
+        public Dictionary<string, Channel> Channels { get; private set; }
+
+        public string SocketID
+        {
+            get { return _connection.SocketID; }
         }
 
         public ConnectionState State
         {
-            get
-            {
-                return _connection.State;
-            }
+            get { return _connection.State; }
         }
 
         #endregion
@@ -73,54 +67,59 @@ namespace PusherClient
         /// <summary>
         /// Initializes a new instance of the <see cref="Pusher" /> class.
         /// </summary>
-        /// <param name="applicationKey">The application key.</param>
-        /// <param name="options">The options.</param>
-        public Pusher()
+        public Pusher(PusherSettings settings)
         {
-            _applicationKey = PusherSettings.AppKey;
-			_options = new PusherOptions();
-			_options.Encrypted = PusherSettings.Encrypted;
+            if(string.IsNullOrEmpty(settings.HttpAuthUrl))
+            {
+                throw new PusherException("Missing PusherSetting endpoints.", ErrorCodes.ConnectionFailed);
+            }
 
-			if( PusherSettings.HttpAuthUrl.Length > 0 )
-				_options.Authorizer = new HttpAuthorizer( PusherSettings.HttpAuthUrl );
+            Channels = new Dictionary<string, Channel>();
+
+            _settings = settings;
+            _authorizer = new HttpJsonAuthorizer(settings.HttpAuthUrl);
         }
-
-        #region Public Methods
 
         public void Connect()
         {
             // Check current connection state
-            if (_connection != null)
+            if(_connection != null)
             {
-                switch (_connection.State)
+                switch(_connection.State)
                 {
                     case ConnectionState.Connected:
-                        LogWarning("Attempt to connect when connection is already in 'Connected' state. New attempt has been ignored.");
-                        break;
+                        LogWarning("Attempt to connect when connection is already in 'Connected' state. " +
+                                   "New attempt has been ignored.");
+                        return;
                     case ConnectionState.Connecting:
-						LogWarning("Attempt to connect when connection is already in 'Connecting' state. New attempt has been ignored.");
-                        break;
+                        LogWarning("Attempt to connect when connection is already in 'Connecting' state. " +
+                                   "New attempt has been ignored.");
+                        return;
                     case ConnectionState.Failed:
                         LogWarning("Cannot attempt re-connection once in 'Failed' state");
-                        throw new PusherException("Cannot attempt re-connection once in 'Failed' state", ErrorCodes.ConnectionFailed);
+                        throw new PusherException("Cannot attempt re-connection once in 'Failed' state",
+                                                  ErrorCodes.ConnectionFailed);
                 }
             }
 
-            var scheme = "ws://";
-
-            if (_options.Encrypted)
-                scheme = "wss://";
+            string scheme = _settings.Encrypted
+                                ? "wss://"
+                                : "ws://";
 
             // TODO: Fallback to secure?
 
-            string url = String.Format("{0}{1}/app/{2}?protocol={3}&client={4}&version={5}", 
-                scheme, this.Host, _applicationKey, Pusher.PROTOCOL_NUMBER, PusherSettings.ClientName, PusherSettings.ClientVersion
-			);
+            var urlBuilder = new StringBuilder();
+            urlBuilder.AppendFormat("{0}{1}/app/{2}?protocol={3}&client={4}&version={5}",
+                                    scheme, Host, _settings.AppKey, _protocolNumber,
+                                    PusherSettings.ClientName, PusherSettings.ClientVersion);
 
-			Log( "Connecting to url: '"+url+"'" );
-            _connection = new Connection(this, url);
-            _connection.Connected += _connection_Connected;
-            _connection.ConnectionStateChanged +=_connection_ConnectionStateChanged;
+            string builtUrl = urlBuilder.ToString();
+
+            Log("Connecting to url: '" + builtUrl + "'");
+
+            _connection = new Connection(this, builtUrl);
+            _connection.Connected += OnConnected;
+            _connection.ConnectionStateChanged += OnConnectionStateChanged;
             _connection.Connect();
         }
 
@@ -131,147 +130,164 @@ namespace PusherClient
 
         public Channel Subscribe(string channelName)
         {
-            if (_connection.State != ConnectionState.Connected)
-				LogWarning("You must wait for Pusher to connect before you can subscribe to a channel");
-
-            if (Channels.ContainsKey(channelName))
+            if(_connection.State != ConnectionState.Connected)
             {
-                LogWarning("Channel '" + channelName + "' is already subscribed to. Subscription event has been ignored.");
+                LogWarning("You must wait for Pusher to connect before you can subscribe to a channel");
+            }
+
+            if(Channels.ContainsKey(channelName))
+            {
+                LogWarning("Channel '" + channelName +
+                           "' is already subscribed to. Subscription event has been ignored.");
                 return Channels[channelName];
             }
 
             // If private or presence channel, check that auth endpoint has been set
-            var chanType = ChannelTypes.Public;
+            var channelType = ChannelTypes.Public;
 
-            if (channelName.ToLower().StartsWith("private-"))
-                chanType = ChannelTypes.Private;
-            else if (channelName.ToLower().StartsWith("presence-"))
-                chanType = ChannelTypes.Presence;
+            if(channelName.StartsWith("private-", StringComparison.OrdinalIgnoreCase))
+            {
+                channelType = ChannelTypes.Private;
+            }
+            else if(channelName.StartsWith("presence-", StringComparison.OrdinalIgnoreCase))
+            {
+                channelType = ChannelTypes.Presence;
+            }
 
-            return SubscribeToChannel(chanType, channelName);
+            return SubscribeToChannel(channelType, channelName);
         }
 
         private Channel SubscribeToChannel(ChannelTypes type, string channelName)
         {
-            switch (type)
+            switch(type)
             {
                 case ChannelTypes.Public:
-                    Channels.Add(channelName, new Channel(channelName, this));
+                    Channels.Add(channelName, new Channel(this, channelName));
                     break;
                 case ChannelTypes.Private:
                     AuthEndpointCheck();
-                    Channels.Add(channelName, new PrivateChannel(channelName, this));
+                    Channels.Add(channelName, new PrivateChannel(this, channelName));
                     break;
                 case ChannelTypes.Presence:
                     AuthEndpointCheck();
-                    Channels.Add(channelName, new PresenceChannel(channelName, this));
+                    LogWarning("Presence Channels are not implemented yet.");
+                    Channels.Add(channelName, new PresenceChannel(this, channelName));
                     break;
             }
 
-            if (type == ChannelTypes.Presence || type == ChannelTypes.Private)
+            switch(type)
             {
-				Log( "Calling auth for channel for: " + channelName );
-				AuthorizeChannel( channelName );
-            }
-            else
-            {
+                case ChannelTypes.Presence:
+                case ChannelTypes.Private:
+                    Log("Calling auth for channel for: " + channelName);
+                    AuthorizeChannel(channelName);
+                    break;
+
                 // No need for auth details. Just send subscribe event
-				_connection.Send(JsonHelper.Serialize(new Dictionary<string, object>() {
-					{ "event", Constants.CHANNEL_SUBSCRIBE },
-					{
-						"data", new Dictionary<string,object>() { 
-							{ "channel", channelName }
-						}
-					}
-				}));
+                default:
+                    var channelData = new Dictionary<string, object> {{PusherJsonKey.Channel, channelName}};
+                    string json = JsonHelper.Serialize(new Dictionary<string, object>
+                                                       {
+                                                           {PusherJsonKey.Event, PusherEvent.ChannelSubscribe},
+                                                           {PusherJsonKey.Data, channelData}
+                                                       });
+                    _connection.Send(json);
+                    break;
             }
 
             return Channels[channelName];
         }
 
-		private void AuthorizeChannel( string channelName ) {
-			string authJson = _options.Authorizer.Authorize( channelName, _connection.SocketID );
-			Log ( "Got replay from server auth: " + authJson );
-			SendChannelAuthData( channelName, authJson );
-		}
+        private void AuthorizeChannel(string channelName)
+        {
+            string authJson = _authorizer.Authorize(channelName, _connection.SocketID);
+            Log("Got reply from server auth: " + authJson);
+            SendChannelAuthData(channelName, authJson);
 
-		private void SendChannelAuthData( string channelName, string jsonAuth ) {
-			// parse info from json data
-			Dictionary<string,object> authDict = JsonHelper.Deserialize<Dictionary<string,object>>( jsonAuth );
-			string authFromMessage = DataFactoryHelper.GetDictonaryValue( authDict, "auth", string.Empty );
-			string channelDataFromMessage = DataFactoryHelper.GetDictonaryValue( authDict, "channel_data", string.Empty );
+            // TODO: SEND CHANNEL DATA WHEN PRESENCE CHANNEl
+        }
 
-			_connection.Send(JsonHelper.Serialize(new Dictionary<string, object>() {
-				{ "event", Constants.CHANNEL_SUBSCRIBE },
-				{
-					"data", new Dictionary<string,object>() { 
-						{ "channel", channelName },
-						{ "auth", authFromMessage },
-						{ "channel_data", channelDataFromMessage }
-					}
-				}
-			}));
-		}
+        private void SendChannelAuthData(string channelName, string jsonAuth)
+        {
+            // parse info from json data
+            var authDict = JsonHelper.Deserialize<Dictionary<string, object>>(jsonAuth);
+            string authFromMessage = DataFactoryHelper.GetDictionaryValue(authDict, PusherJsonKey.Auth, string.Empty);
+            var channelAuthData = new Dictionary<string, object>
+                                  {
+                                      {PusherJsonKey.Channel, channelName},
+                                      {PusherJsonKey.Auth, authFromMessage}
+                                  };
+
+            //string channelDataFromMessage = DataFactoryHelper.GetDictionaryValue( authDict, "channel_data", string.Empty );
+
+            string json = JsonHelper.Serialize(new Dictionary<string, object>
+                                               {
+                                                   {PusherJsonKey.Event, PusherEvent.ChannelSubscribe},
+                                                   {PusherJsonKey.Data, channelAuthData}
+
+                                                   // TODO: SEND CHANNEL DATA WHEN PRESENCE CHANNEL
+                                                   // { "channel_data", channelDataFromMessage }
+                                               });
+
+            _connection.Send(json);
+        }
 
         private void AuthEndpointCheck()
         {
-            if (_options.Authorizer == null)
+            if(_authorizer == null)
             {
-                throw new PusherException("You must set a ChannelAuthorizer property to use private or presence channels", ErrorCodes.ChannelAuthorizerNotSet);
+                const string message = "You must set a ChannelAuthorizer property to use private or presence channels";
+                throw new PusherException(message, ErrorCodes.ChannelAuthorizerNotSet);
             }
         }
 
-        public void Send(string eventName, object data, string channel = null)
+        public void Send(string eventName, object data, string channelName = null)
         {
-			_connection.Send(JsonHelper.Serialize(new Dictionary<string, object>() {
-				{ "event", eventName },
-				{ "data", data },
-				{ "channel", channel }
-			}));
+            string json = JsonHelper.Serialize(new Dictionary<string, object>
+                                               {
+                                                   {PusherJsonKey.Event, eventName},
+                                                   {PusherJsonKey.Data, data},
+                                                   {PusherJsonKey.Channel, channelName}
+                                               });
+            _connection.Send(json);
         }
-
-        #endregion
-
-        #region Internal Methods
 
         internal void Trigger(string channelName, string eventName, object obj)
         {
-			_connection.Send(JsonHelper.Serialize(new Dictionary<string, object>() {
-				{ "event", eventName },
-				{ "channel", channelName },
-				{ "data", obj }
-			}));
+            string json = JsonHelper.Serialize(new Dictionary<string, object>()
+                                               {
+                                                   {PusherJsonKey.Event, eventName},
+                                                   {PusherJsonKey.Data, obj},
+                                                   {PusherJsonKey.Channel, channelName}
+                                               });
+            _connection.Send(json);
         }
 
         internal void Unsubscribe(string channelName)
         {
-			_connection.Send(JsonHelper.Serialize(new Dictionary<string, object>() {
-				{ "event", Constants.CHANNEL_UNSUBSCRIBE },
-				{
-					"data", new Dictionary<string,object>() { 
-						{ "channel", channelName }
-					}
-				}
-			}));
+            var unsubscribeData = new Dictionary<string, object> {{PusherJsonKey.Channel, channelName}};
+            string json = JsonHelper.Serialize(new Dictionary<string, object>()
+                                               {
+                                                   {PusherJsonKey.Event, PusherEvent.ChannelUnsubscribe},
+                                                   {PusherJsonKey.Data, unsubscribeData}
+                                               });
+            _connection.Send(json);
         }
 
-        #endregion
-
-        #region Connection Event Handlers
-
-        private void _connection_ConnectionStateChanged(object sender, ConnectionState state)
+        private void OnConnectionStateChanged(object sender, ConnectionState state)
         {
-            if (ConnectionStateChanged != null)
+            if(ConnectionStateChanged != null)
+            {
                 ConnectionStateChanged(sender, state);
+            }
         }
 
-        void _connection_Connected(object sender)
+        private void OnConnected(object sender)
         {
-            if (this.Connected != null)
-                this.Connected(sender);
+            if(Connected != null)
+            {
+                Connected(sender);
+            }
         }
-
-        #endregion
-
     }
 }

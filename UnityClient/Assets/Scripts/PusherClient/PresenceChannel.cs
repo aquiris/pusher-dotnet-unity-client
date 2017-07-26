@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 
 namespace PusherClient
 {
@@ -9,65 +6,67 @@ namespace PusherClient
 
     public class PresenceChannel : PrivateChannel
     {
-        public Dictionary<string, object> Members = new Dictionary<string, object>();
+        public Dictionary<string, object> Members { get; private set; }
 
         public event MemberEventHandler MemberAdded;
         public event MemberEventHandler MemberRemoved;
 
-        public PresenceChannel(string channelName, Pusher pusher) : base(channelName, pusher) { }
-
-        #region Internal Methods
+        public PresenceChannel(Pusher pusher, string channelName) : base(pusher, channelName)
+        {
+            Members = new Dictionary<string, object>();
+        }
 
         internal override void SubscriptionSucceeded(string data)
         {
-            Members = ParseMembersList(data);
+            Members = new Dictionary<string, object>(); //ParseMembersList(data);
             base.SubscriptionSucceeded(data);
         }
 
         internal void AddMember(string data)
         {
-            var member = ParseMember(data);
+            var member = new KeyValuePair<string, object>("", ""); //ParseMember(data);
 
-            if (!Members.ContainsKey(member.Key))
-                Members.Add(member.Key, member.Value);
-            else
+            if(Members.ContainsKey(member.Key))
+            {
                 Members[member.Key] = member.Value;
+            }
+            else
+            {
+                Members.Add(member.Key, member.Value);
+            }
 
-            if (MemberAdded != null)
+            if(MemberAdded != null)
+            {
                 MemberAdded(this);
+            }
         }
 
         internal void RemoveMember(string data)
         {
-            var member = ParseMember(data);
+            var member = new KeyValuePair<string, object>("", ""); //ParseMember(data);
 
-            if (Members.ContainsKey(member.Key))
+            if(Members.ContainsKey(member.Key))
             {
                 Members.Remove(member.Key);
 
-                if (MemberRemoved != null)
+                if(MemberRemoved != null)
+                {
                     MemberRemoved(this);
+                }
             }
         }
 
-        #endregion
-
-        #region Private Methods
-
+        /*
         private Dictionary<string, object> ParseMembersList(string data)
         {
-            Dictionary<string, object> members = new Dictionary<string, object>();
-			return members;
+            Dictionary<string, object> dataAsDict = JsonHelper.Deserialize<Dictionary<string, object>>(data);
+            Dictionary<string, object> presenceDict = (Dictionary<string,object>)dataAsDict[ "presence" ];
+            foreach( KeyValuePair presenceKvp in dataAsDict ) {
+                string 
+                i++;
+            }
 
-			/*
-			Dictionary<string, object> dataAsDict = JsonHelper.Deserialize<Dictionary<string, object>>(data);
-			Dictionary<string, object> presenceDict = (Dictionary<string,object>)dataAsDict[ "presence" ];
-			foreach( KeyValuePair presenceKvp in dataAsDict ) {
-				string 
-				i++;
-			}
-
-			for (int i = 0; i < (int)dataAsObj.presence.count; i++)
+            for (int i = 0; i < (int)dataAsObj.presence.count; i++)
             {
                 var id = (string)dataAsObj.presence.ids[i];
                 var val = (dynamic)dataAsObj.presence.hash[id];
@@ -75,26 +74,17 @@ namespace PusherClient
             }
 
             return members;
-			*/
         }
 
         private KeyValuePair<string, object> ParseMember(string data)
         {
-			/*
-			var dataAsObj = JsonHelper.Deserialize<dynamic>(data);
+            var dataAsObj = JsonHelper.Deserialize<dynamic>(data);
 
             var id = (string)dataAsObj.user_id;
             var val = (dynamic)dataAsObj.user_info;
 
             return new KeyValuePair<string, dynamic>(id, val);
-            */
-
-			var id = "";
-			var val ="";
-			return new KeyValuePair<string, object>(id, val);
         }
-
-        #endregion
-
+        */
     }
 }

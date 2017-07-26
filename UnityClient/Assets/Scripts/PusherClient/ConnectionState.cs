@@ -1,6 +1,4 @@
-﻿using System;
-
-
+﻿
 namespace PusherClient
 {
     public enum ConnectionState

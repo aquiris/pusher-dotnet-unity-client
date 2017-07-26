@@ -1,11 +1,10 @@
-﻿using System;
-
+﻿
 namespace PusherClient
 {
     public enum ErrorCodes
     {
         // Catch all
-        Unkown = 0,
+        Unknown = 0,
 
         // Reserved codes
         MustConnectOverSSL = 4000,
@@ -16,7 +15,7 @@ namespace PusherClient
         ClientOverRateLimit = 4301,
 
         // Library codes
-        ConnectionFailed = 5000, 
+        ConnectionFailed = 5000,
         ChannelAuthorizerNotSet = 5001,
         NotConnected = 5002,
         SubscriptionError = 5003

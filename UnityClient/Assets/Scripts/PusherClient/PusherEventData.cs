@@ -1,28 +1,30 @@
-﻿using UnityEngine;
-using System.Collections;
-using System.Collections.Generic;
-
+﻿using System.Collections.Generic;
+using PusherClient.Helper;
 
 namespace PusherClient
 {
-	internal class PusherEventData
-	{
-		public string eventName = string.Empty;
-		public string channel = string.Empty;
-		public string data = string.Empty;
+    internal struct PusherEventData
+    {
+        public string EventName { get; private set; }
+        public string Channel { get; private set; }
+        public string Data { get; private set; }
 
-		public static PusherEventData FromJson( string json ) {
-			PusherEventData data = new PusherEventData();
-			Dictionary<string,object> dict = JsonHelper.Deserialize<Dictionary<string,object>>( json );
-			if( dict != null ) {
-				data.eventName = DataFactoryHelper.GetDictonaryValue( dict, "event", string.Empty );
-				data.data = DataFactoryHelper.GetDictonaryValue( dict, "data", string.Empty );
-				data.channel = DataFactoryHelper.GetDictonaryValue( dict, "channel", string.Empty );
-			} else {
-				Debug.LogWarning( "invalid pusher event data: '"+json+"'" );
-			}
+        public static PusherEventData FromJson(string json)
+        {
+            var data = new PusherEventData();
+            var dict = JsonHelper.Deserialize<Dictionary<string, object>>(json);
+            if(dict != null)
+            {
+                data.EventName = DataFactoryHelper.GetDictionaryValue(dict, PusherJsonKey.Event, string.Empty);
+                data.Data = DataFactoryHelper.GetDictionaryValue(dict, PusherJsonKey.Data, string.Empty);
+                data.Channel = DataFactoryHelper.GetDictionaryValue(dict, PusherJsonKey.Channel, string.Empty);
+            }
+            else
+            {
+                Pusher.LogWarning("Invalid PusherEventData: '" + json + "'");
+            }
 
-			return data;
-		}
-	}
+            return data;
+        }
+    }
 }

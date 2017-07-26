@@ -1,50 +1,44 @@
-﻿using System;
-using System.Collections.Generic;
-
+﻿
 namespace PusherClient
 {
     public delegate void SubscriptionEventHandler(object sender);
 
     public class Channel : EventEmitter
     {
-        private Pusher _pusher = null;
-        private bool _isSubscribed = false;
+        private readonly Pusher _pusher;
 
-        public event SubscriptionEventHandler Subscribed;
-        public string Name = null;
+        public event SubscriptionEventHandler OnSubscription;
+        public string Name { get; private set; }
 
-        public bool IsSubscribed
-        {
-            get
-            {
-                return _isSubscribed;
-            }
-        }
+        public bool IsSubscribed { get; private set; }
 
-        public Channel(string channelName, Pusher pusher)
+        public Channel(Pusher pusher, string channelName)
         {
             _pusher = pusher;
-            this.Name = channelName;
+
+            Name = channelName;
         }
 
         internal virtual void SubscriptionSucceeded(string data)
         {
-            _isSubscribed = true;
+            IsSubscribed = true;
 
-            if(Subscribed != null)
-                Subscribed(this);
+            if(OnSubscription != null)
+            {
+                OnSubscription(this);
+            }
         }
 
         public void Unsubscribe()
         {
-            _isSubscribed = false;
-            _pusher.Unsubscribe(this.Name);
+            IsSubscribed = false;
+
+            _pusher.Unsubscribe(Name);
         }
 
         public void Trigger(string eventName, object obj)
         {
-            _pusher.Trigger(this.Name, eventName, obj);
+            _pusher.Trigger(Name, eventName, obj);
         }
-
     }
 }
