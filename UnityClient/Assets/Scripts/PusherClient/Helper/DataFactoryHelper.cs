@@ -1,62 +1,79 @@
-using UnityEngine;
-using System.Collections;
+using System;
 using System.Collections.Generic;
 
-public static class DataFactoryHelper
+namespace PusherClient.Helper
 {
-	// utility method for loading string value from dictory, or default if not set
-	public static string GetDictonaryValue( Dictionary<string,object> dictionary, string key, string defaultValue = "" ) {
-		if( dictionary.ContainsKey(key) ) {
-			if( dictionary[key] is string ) {
-				return (string)dictionary[key];
-			}
-			else if( dictionary[key] != null ) {
-				return dictionary[key].ToString();
-			}
-		}
+    public static class DataFactoryHelper
+    {
+        // Utility method for loading string value from dictionary, or default if not set
+        public static string GetDictionaryValue(Dictionary<string, object> dictionary, string key,
+                                                string defaultValue = "")
+        {
+            object obj;
+            if(dictionary.TryGetValue(key, out obj))
+            {
+                string stringObj = obj as string;
+                if(stringObj != null)
+                {
+                    return stringObj;
+                }
 
-		return defaultValue;
-	}
+                if(obj != null)
+                {
+                    return obj.ToString();
+                }
+            }
 
-	public static int GetDictonaryInt( Dictionary<string,object> dictionary, string key, int defaultValue ) {
-		string str = GetDictonaryValue( dictionary, key, "null" );
-		int result = defaultValue;
-		if( str != "null" ) {
-			if( !int.TryParse( str, out result ) ) {
-				// Debug.LogWarning( "Failed to parse value as int, going with default.  Value was: '" + str + "', for key: '"+key+"'" );
-				result = defaultValue;
-			}
-		}
+            return defaultValue;
+        }
 
-		return result;
-	}
+        //public static int GetDictionaryInt(Dictionary<string, object> dictionary, string key, int defaultValue)
+        //{
+        //    string str = GetDictionaryValue(dictionary, key, "null");
+        //    int result = defaultValue;
+        //    if(str != "null")
+        //    {
+        //        if(!int.TryParse(str, out result))
+        //        {
+        //            // Debug.LogWarning( "Failed to parse value as int, going with default.  Value was: '" + str + "', for key: '"+key+"'" );
+        //            result = defaultValue;
+        //        }
+        //    }
 
-	public static double GetDictionaryDouble( Dictionary<string,object> dictionary, string key, double defaultValue ) {
-		if( !dictionary.ContainsKey(key) ) {
-			return defaultValue;
-		} else {
-			object val = dictionary[key];
-			if( val is double ) {
-				return (double)val;
-			} else {
-				return double.Parse( val.ToString() );
-			}
-		}
-	}
+        //    return result;
+        //}
 
-	public static bool GetDictonaryBool( Dictionary<string,object> dictionary, string key, bool defaultValue ) {
-		string str = GetDictonaryValue( dictionary, key, "null" );
-		return str != "null" ? bool.Parse( str ) : defaultValue;
-	}
-	
-	public static T EnumFromString<T>( string str ) {
-		System.Type enumType = typeof( T );
-		T[] enumValues = (T[])System.Enum.GetValues( enumType );
-		foreach( T enumVal in enumValues ) {
-			if( enumVal.ToString() == str )
-				return enumVal;
-		}
+        //public static double GetDictionaryDouble(Dictionary<string, object> dictionary, string key, double defaultValue)
+        //{
+        //    if(!dictionary.ContainsKey(key))
+        //    {
+        //        return defaultValue;
+        //    }
+        //    else
+        //    {
+        //        object val = dictionary[key];
+        //        if(val is double)
+        //        {
+        //            return (double) val;
+        //        }
+        //        else
+        //        {
+        //            return double.Parse(val.ToString());
+        //        }
+        //    }
+        //}
 
-		throw new System.Exception( str + " is not a valid enum type for: " + enumType.ToString() );
-	}
+        //public static bool GetDictionaryBool(Dictionary<string, object> dictionary, string key, bool defaultValue)
+        //{
+        //    string str = GetDictionaryValue(dictionary, key, "null");
+        //    return str != "null" ? bool.Parse(str) : defaultValue;
+        //}
+
+        public static T EnumFromString<T>(string str)
+        {
+            // Enum.Parse will throw all exceptions we need
+            var outValue = (T) Enum.Parse(typeof(T), str);
+            return outValue;
+        }
+    }
 }

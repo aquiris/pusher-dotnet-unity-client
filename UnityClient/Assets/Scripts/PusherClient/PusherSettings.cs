@@ -1,21 +1,39 @@
-﻿using UnityEngine;
-using System.Collections;
+﻿using System;
 
-public class PusherSettings
+namespace PusherClient
 {
-	// if true, Pusher will output debug info to console
-	public static bool Verbose = true;
+    public struct PusherSettings
+    {
+        [Flags]
+        public enum ELogLevel
+        {
+            None = 0,
+            Log = 1 << 0,
+            Warning = (1 << 1) | Log,
+            Error = (1 << 2) | Warning
+        }
 
-	// App Key from pusher.com app settings
-	public static string AppKey = "";
+        // Client name & version for identifying client library
+        public const string ClientName = "client-pusherUnityAquirisFork";
+        public const string ClientVersion = "1.0";
 
-	// if true, then connection to pusher will be encrypted
-	public static bool Encrypted = true;
+        // Defines the log level in Pusher
+        public static ELogLevel LogLevel = ELogLevel.Log;
 
-	// if specified, then this will be used as callback url for authorizing connections to private channels
-	public static string HttpAuthUrl = "";
+        // App Key from pusher.com app settings
+        public string AppKey { get; private set; }
 
-	// client name & version for identifying client library
-	public static string ClientName = "pusher-unity";
-	public static string ClientVersion = "1.0";
+        // If true, then connection to pusher will be encrypted
+        public bool Encrypted { get; private set; }
+
+        // If specified, then this will be used as callback url for authorizing connections to private channels
+        public string HttpAuthUrl { get; private set; }
+
+        public PusherSettings(string appKey, bool encrypted, string httpAuthUrl = "") : this()
+        {
+            AppKey = appKey;
+            Encrypted = encrypted;
+            HttpAuthUrl = httpAuthUrl;
+        }
+    }
 }
