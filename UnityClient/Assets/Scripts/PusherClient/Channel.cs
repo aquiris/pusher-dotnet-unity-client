@@ -1,5 +1,4 @@
-﻿using System.Collections;
-
+﻿
 namespace PusherClient
 {
     public delegate void SubscriptionEventHandler(object sender);
@@ -40,11 +39,6 @@ namespace PusherClient
         public void Trigger(string eventName, object obj)
         {
             _pusher.Trigger(Name, eventName, obj);
-        }
-
-        public void SendMessage(string message)
-        {
-            _pusher.Trigger(Name, PusherEvent.NewMessage, new DictionaryEntry(PusherJsonKey.Message, message));
         }
     }
 }

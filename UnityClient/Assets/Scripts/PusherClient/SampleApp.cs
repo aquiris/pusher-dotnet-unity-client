@@ -40,13 +40,13 @@ namespace PusherClient
         [ContextMenu("Send Message"), UsedImplicitly]
         private void TestSendMessage()
         {
-            SendPusherMessage("player_id", "(insert message here)", "private-test-channel");
+            SendPusherMessageToChannel("player_id", "(insert message here)");
         }
 
         [UsedImplicitly]
-        private void SendPusherMessage(string playerId, string message, string channelName)
+        private void SendPusherMessageToChannel(string playerId, string message)
         {
-            _pusherChannel.SendMessage(message);
+            _pusherChannel.Trigger("client-send-message", message);
         }
 
         private void HandleConnected(object sender)
