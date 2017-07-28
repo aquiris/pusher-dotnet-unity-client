@@ -3,7 +3,7 @@ namespace PusherClient
 {
     public class PusherEvent
     {
-        public const string PusherEventPrefix = "pusher:";
+        public const string PusherEventPrefix = "pusher";
 
         public const string Error = "pusher:error";
         public const string ConnectionEstablished = "pusher:connection_established";
