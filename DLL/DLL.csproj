@@ -40,14 +40,14 @@
     <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\Channel.cs">
       <Link>Scripts\PusherClient\Channel.cs</Link>
     </Compile>
-    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\ChannelTypes.cs">
-      <Link>Scripts\PusherClient\ChannelTypes.cs</Link>
-    </Compile>
     <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\Connection.cs">
       <Link>Scripts\PusherClient\Connection.cs</Link>
     </Compile>
     <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\ConnectionState.cs">
       <Link>Scripts\PusherClient\ConnectionState.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\EChannelType.cs">
+      <Link>Scripts\PusherClient\EChannelType.cs</Link>
     </Compile>
     <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\ErrorCodes.cs">
       <Link>Scripts\PusherClient\ErrorCodes.cs</Link>
@@ -61,11 +61,17 @@
     <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\Helper\JsonHelper.cs">
       <Link>Scripts\PusherClient\Helper\JsonHelper.cs</Link>
     </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\HttpAsyncJsonAuthorizer.cs">
+      <Link>Scripts\PusherClient\HttpAsyncJsonAuthorizer.cs</Link>
+    </Compile>
     <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\HttpJsonAuthorizer.cs">
       <Link>Scripts\PusherClient\HttpJsonAuthorizer.cs</Link>
     </Compile>
     <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\HttpPostAuthorizer.cs">
       <Link>Scripts\PusherClient\HttpPostAuthorizer.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\IAsyncAuthorizer.cs">
+      <Link>Scripts\PusherClient\IAsyncAuthorizer.cs</Link>
     </Compile>
     <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\IAuthorizer.cs">
       <Link>Scripts\PusherClient\IAuthorizer.cs</Link>

@@ -41,6 +41,7 @@ namespace PusherClient
         private void OnUploadStringCompleted(object sender, UploadStringCompletedEventArgs eventArgs)
         {
             var webclient = (WebClient) sender;
+            webclient.UploadStringCompleted -= OnUploadStringCompleted;
 
             AuthResponse authResponseObj = _responseMap[webclient];
             _responseMap.Remove(webclient);
