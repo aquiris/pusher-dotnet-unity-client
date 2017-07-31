@@ -230,11 +230,7 @@ namespace PusherClient.Helper
         {
             try
             {
-                object obj = Deserialize(json);
-                if(obj is T)
-                {
-                    return (T) obj;
-                }
+                return (T) Deserialize(json);
             }
             catch(Exception ex)
             {

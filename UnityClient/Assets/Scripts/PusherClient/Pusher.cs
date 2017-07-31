@@ -16,7 +16,7 @@ namespace PusherClient
 
         private const int _protocolNumber = 5;
 
-        private readonly IAuthorizer _authorizer;
+        private readonly IAsyncAuthorizer _authorizer;
 
         private readonly PusherSettings _settings;
 
@@ -29,13 +29,13 @@ namespace PusherClient
         {
             if(string.IsNullOrEmpty(settings.HttpAuthUrl))
             {
-                throw new PusherException("Missing PusherSetting endpoints.", ErrorCodes.ConnectionFailed);
+                throw new PusherException("Missing PusherSetting endpoint", ErrorCodes.ConnectionFailed);
             }
 
             Channels = new Dictionary<string, Channel>();
 
             _settings = settings;
-            _authorizer = new HttpJsonAuthorizer(settings.HttpAuthUrl);
+            _authorizer = new HttpAsyncJsonAuthorizer(settings.HttpAuthUrl);
         }
 
         public event ConnectedEventHandler Connected;
@@ -142,6 +142,7 @@ namespace PusherClient
             if(_connection.State != ConnectionState.Connected)
             {
                 LogWarning("You must wait for Pusher to connect before you can subscribe to a channel");
+                return null;
             }
 
             if(Channels.ContainsKey(channelName))
@@ -152,15 +153,15 @@ namespace PusherClient
             }
 
             // If private or presence channel, check that auth endpoint has been set
-            var channelType = ChannelTypes.Public;
+            var channelType = EChannelType.Public;
 
             if(channelName.StartsWith("private-", StringComparison.OrdinalIgnoreCase))
             {
-                channelType = ChannelTypes.Private;
+                channelType = EChannelType.Private;
             }
             else if(channelName.StartsWith("presence-", StringComparison.OrdinalIgnoreCase))
             {
-                channelType = ChannelTypes.Presence;
+                channelType = EChannelType.Presence;
             }
 
             return SubscribeToChannel(channelType, channelName);
@@ -188,24 +189,6 @@ namespace PusherClient
             _connection.Send(json);
         }
 
-        private void AuthEndpointCheck()
-        {
-            if(_authorizer == null)
-            {
-                const string message = "You must set a ChannelAuthorizer property to use private or presence channels";
-                throw new PusherException(message, ErrorCodes.ChannelAuthorizerNotSet);
-            }
-        }
-
-        private void AuthorizeChannel(string channelName)
-        {
-            string authJson = _authorizer.Authorize(channelName, _connection.SocketID);
-            Log("Got reply from server auth: " + authJson);
-            SendChannelAuthData(channelName, authJson);
-
-            // TODO: SEND CHANNEL DATA WHEN PRESENCE CHANNEl
-        }
-
         private void OnConnected(object sender)
         {
             if(Connected != null)
@@ -222,10 +205,48 @@ namespace PusherClient
             }
         }
 
-        private void SendChannelAuthData(string channelName, string jsonAuth)
+        private Channel SubscribeToChannel(EChannelType channelType, string channelName)
         {
-            // parse info from json data
-            var authDict = JsonHelper.Deserialize<Dictionary<string, object>>(jsonAuth);
+            switch(channelType)
+            {
+                case EChannelType.Public:
+                    Channels.Add(channelName, new Channel(this, channelName));
+                    SendPublicSubscription(channelName);
+                    break;
+                case EChannelType.Private:
+                    Channels.Add(channelName, new PresenceChannel(this, channelName));
+                    SendAuthenticatedSubscription(channelName);
+                    break;
+                case EChannelType.Presence:
+                    Channels.Add(channelName, new PresenceChannel(this, channelName));
+                    SendAuthenticatedSubscription(channelName);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException("channelType", channelType, "Invalid channel type");
+            }
+
+            return Channels[channelName];
+        }
+
+        private void SendPublicSubscription(string channelName)
+        {
+            var channelData = new Dictionary<string, object> {{PusherJsonKey.Channel, channelName}};
+            string json = JsonHelper.Serialize(new Dictionary<string, object>
+                                               {
+                                                   {PusherJsonKey.Event, PusherEvent.ChannelSubscribe},
+                                                   {PusherJsonKey.Data, channelData}
+                                               });
+            _connection.Send(json);
+        }
+
+        private void SendAuthenticatedSubscription(string channelName)
+        {
+            _authorizer.Authorize(channelName, _connection.SocketID, OnAuthenticationResponse);
+        }
+
+        private void OnAuthenticationResponse(string channelName, string authResponse)
+        {
+            var authDict = JsonHelper.Deserialize<Dictionary<string, object>>(authResponse);
             string authFromMessage = DataFactoryHelper.GetDictionaryValue(authDict, PusherJsonKey.Auth, string.Empty);
             var channelAuthData = new Dictionary<string, object>
                                   {
@@ -245,47 +266,6 @@ namespace PusherClient
                                                });
 
             _connection.Send(json);
-        }
-
-        private Channel SubscribeToChannel(ChannelTypes type, string channelName)
-        {
-            switch(type)
-            {
-                case ChannelTypes.Public:
-                    Channels.Add(channelName, new Channel(this, channelName));
-                    break;
-                case ChannelTypes.Private:
-                    AuthEndpointCheck();
-                    Channels.Add(channelName, new PrivateChannel(this, channelName));
-                    break;
-                case ChannelTypes.Presence:
-                    AuthEndpointCheck();
-                    LogWarning("Presence Channels are not implemented yet.");
-                    Channels.Add(channelName, new PresenceChannel(this, channelName));
-                    break;
-            }
-
-            switch(type)
-            {
-                case ChannelTypes.Presence:
-                case ChannelTypes.Private:
-                    Log("Calling auth for channel for: " + channelName);
-                    AuthorizeChannel(channelName);
-                    break;
-
-                // No need for auth details. Just send subscribe event
-                default:
-                    var channelData = new Dictionary<string, object> {{PusherJsonKey.Channel, channelName}};
-                    string json = JsonHelper.Serialize(new Dictionary<string, object>
-                                                       {
-                                                           {PusherJsonKey.Event, PusherEvent.ChannelSubscribe},
-                                                           {PusherJsonKey.Data, channelData}
-                                                       });
-                    _connection.Send(json);
-                    break;
-            }
-
-            return Channels[channelName];
         }
     }
 }

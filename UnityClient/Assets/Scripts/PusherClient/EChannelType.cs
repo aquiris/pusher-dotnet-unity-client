@@ -1,7 +1,7 @@
 ﻿
 namespace PusherClient
 {
-    public enum ChannelTypes
+    public enum EChannelType
     {
         Public,
         Private,

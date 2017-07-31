@@ -19,7 +19,7 @@ namespace PusherClient
                 string data = string.Format("{{\"channelName\":\"{0}\",\"socketId\":\"{1}\"}}", channelName, socketId);
                 Pusher.Log("Authorize data: " + data);
                 webClient.Headers[HttpRequestHeader.ContentType] = "application/json";
-
+                
                 string authToken = webClient.UploadString(_authEndpoint, data);
                 return authToken;
             }
