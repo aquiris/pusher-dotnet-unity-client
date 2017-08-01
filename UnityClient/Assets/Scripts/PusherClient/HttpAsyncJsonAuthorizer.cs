@@ -26,7 +26,7 @@ namespace PusherClient
         {
             var authResponseObj = new AuthResponse {ChannelName = channelName, OnAuthResponse = onAuthResponse};
 
-            string data = string.Format("{{\"channelName\":\"{0}\",\"socketId\":\"{1}\"}}", channelName, socketId);
+            string data = string.Format(@"{{""channelName"":""{0}"", ""socketId"":""{1}""}}", channelName, socketId);
             Pusher.Log("Authorize data: " + data);
 
             var webClient = new WebClient();
@@ -47,7 +47,7 @@ namespace PusherClient
             _responseMap.Remove(webclient);
             webclient.Dispose();
 
-            Pusher.Log("Got reply from server auth: " + authResponseObj.OnAuthResponse);
+            Pusher.Log("Got reply from server auth: " + eventArgs.Result);
 
             if(authResponseObj.OnAuthResponse != null)
             {
