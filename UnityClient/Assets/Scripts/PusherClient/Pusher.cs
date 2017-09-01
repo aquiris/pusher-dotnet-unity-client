@@ -70,12 +70,12 @@ namespace PusherClient
 
         public string SocketID
         {
-            get { return _connection.SocketID; }
+            get { return _connection == null ? null : _connection.SocketID; }
         }
 
         public ConnectionState State
         {
-            get { return _connection.State; }
+            get { return _connection == null ? ConnectionState.Disconnected : _connection.State; }
         }
 
         public void Connect()
@@ -147,8 +147,7 @@ namespace PusherClient
 
             if(Channels.ContainsKey(channelName))
             {
-                LogWarning("Channel '" + channelName +
-                           "' is already subscribed to. Subscription event has been ignored.");
+                Log("Channel '" + channelName + "' is already subscribed to.");
                 return Channels[channelName];
             }
 
@@ -187,6 +186,8 @@ namespace PusherClient
                                                    {PusherJsonKey.Data, unsubscribeData}
                                                });
             _connection.Send(json);
+
+            Channels.Remove(channelName);
         }
 
         private void OnConnected(object sender)
