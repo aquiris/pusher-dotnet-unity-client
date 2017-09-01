@@ -1,5 +1,4 @@
-﻿using JetBrains.Annotations;
-using PusherClient.Helper;
+﻿using PusherClient.Helper;
 using UnityEngine;
 
 namespace PusherClient
@@ -9,7 +8,6 @@ namespace PusherClient
         private Pusher _pusherClient;
         private Channel _pusherChannel;
 
-        [UsedImplicitly]
         private void Start()
         {
             PusherSettings.LogLevel = PusherSettings.ELogLevel.Error;
@@ -23,7 +21,6 @@ namespace PusherClient
             _pusherClient.Connect();
         }
 
-        [UsedImplicitly]
         private void OnDestroy()
         {
             if(_pusherClient != null)
@@ -37,13 +34,12 @@ namespace PusherClient
             return _pusherClient.Subscribe(channelName);
         }
 
-        [ContextMenu("Send Message"), UsedImplicitly]
+        [ContextMenu("Send Message")]
         private void TestSendMessage()
         {
             SendPusherMessageToChannel("player_id", "(insert message here)");
         }
 
-        [UsedImplicitly]
         private void SendPusherMessageToChannel(string playerId, string message)
         {
             _pusherChannel.Trigger("client-send-message", message);

@@ -1,0 +1,125 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{8D770594-8C2B-4447-B277-FF2F170CFDB0}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Pusher</RootNamespace>
+    <AssemblyName>Pusher</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile>Unity Subset v3.5</TargetFrameworkProfile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\UnityClient\Assets\Plugins\MiniJSON\MiniJSON.cs">
+      <Link>Plugins\MiniJSON\MiniJSON.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Plugins\MiniJSON\MiniJsonExtensions.cs">
+      <Link>Plugins\MiniJSON\MiniJsonExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\Channel.cs">
+      <Link>Scripts\PusherClient\Channel.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\Connection.cs">
+      <Link>Scripts\PusherClient\Connection.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\ConnectionState.cs">
+      <Link>Scripts\PusherClient\ConnectionState.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\EChannelType.cs">
+      <Link>Scripts\PusherClient\EChannelType.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\ErrorCodes.cs">
+      <Link>Scripts\PusherClient\ErrorCodes.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\EventEmitter.cs">
+      <Link>Scripts\PusherClient\EventEmitter.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\Helper\DataFactoryHelper.cs">
+      <Link>Scripts\PusherClient\Helper\DataFactoryHelper.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\Helper\JsonHelper.cs">
+      <Link>Scripts\PusherClient\Helper\JsonHelper.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\HttpAsyncJsonAuthorizer.cs">
+      <Link>Scripts\PusherClient\HttpAsyncJsonAuthorizer.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\HttpJsonAuthorizer.cs">
+      <Link>Scripts\PusherClient\HttpJsonAuthorizer.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\HttpPostAuthorizer.cs">
+      <Link>Scripts\PusherClient\HttpPostAuthorizer.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\IAsyncAuthorizer.cs">
+      <Link>Scripts\PusherClient\IAsyncAuthorizer.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\IAuthorizer.cs">
+      <Link>Scripts\PusherClient\IAuthorizer.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\PresenceChannel.cs">
+      <Link>Scripts\PusherClient\PresenceChannel.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\PrivateChannel.cs">
+      <Link>Scripts\PusherClient\PrivateChannel.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\Pusher.cs">
+      <Link>Scripts\PusherClient\Pusher.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\PusherEvent.cs">
+      <Link>Scripts\PusherClient\PusherEvent.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\PusherEventData.cs">
+      <Link>Scripts\PusherClient\PusherEventData.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\PusherException.cs">
+      <Link>Scripts\PusherClient\PusherException.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\PusherJsonKey.cs">
+      <Link>Scripts\PusherClient\PusherJsonKey.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\PusherSettings.cs">
+      <Link>Scripts\PusherClient\PusherSettings.cs</Link>
+    </Compile>
+    <Compile Include="..\UnityClient\Assets\Scripts\PusherClient\SampleApp.cs">
+      <Link>Scripts\PusherClient\SampleApp.cs</Link>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="UnityEngine">
+      <HintPath>..\UnityClient\Library\UnityAssemblies\UnityEngine.dll</HintPath>
+    </Reference>
+    <Reference Include="websocket-sharp">
+      <HintPath>..\UnityClient\Assets\Plugins\websocket-sharp.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
